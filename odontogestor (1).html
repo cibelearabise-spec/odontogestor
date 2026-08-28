@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>OdontoGestor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#F6F8F9;
+  --surface:#FFFFFF;
+  --ink:#152532;
+  --ink-muted:#66788A;
+  --border:#E1E7EB;
+  --primary:#0F4C5C;
+  --primary-dark:#0A3844;
+  --accent:#14919B;
+  --accent-soft:#DFF3F4;
+  --good:#2F9E7F;
+  --good-soft:#E1F5EE;
+  --warn:#D98E2B;
+  --warn-soft:#FCF0DC;
+  --bad:#DA5B4C;
+  --bad-soft:#FBE6E3;
+  --violet:#7C6FD1;
+  --violet-soft:#EBE8FB;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+
+#app{display:flex;min-height:100vh;}
+
+/* ---- Sidebar ---- */
+.sidebar{width:220px;background:var(--primary);color:#fff;display:flex;flex-direction:column;flex-shrink:0;}
+.brand{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,.12);}
+.brand .display{font-size:19px;font-weight:700;letter-spacing:.2px;}
+.brand .sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px;letter-spacing:.5px;text-transform:uppercase;}
+.nav{padding:14px 10px;display:flex;flex-direction:column;gap:2px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,.72);background:none;border:none;text-align:left;font-size:14px;font-weight:500;transition:.15s;}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,.14);color:#fff;}
+.nav-item .ic{font-size:16px;width:18px;text-align:center;}
+.sidebar-foot{margin-top:auto;padding:16px 20px;font-size:11px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.1);}
+
+/* ---- Main ---- */
+main{flex:1;padding:26px 32px 60px;min-width:0;}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;gap:16px;flex-wrap:wrap;}
+.topbar h1{font-size:22px;margin:0 0 4px;}
+.topbar .desc{color:var(--ink-muted);font-size:13.5px;margin:0;}
+.btn{border:none;border-radius:8px;padding:10px 16px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:var(--bad-soft);color:var(--bad);}
+.btn-sm{padding:6px 10px;font-size:12.5px;border-radius:6px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+.grid-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px;}
+.stat{padding:16px 18px;}
+.stat .label{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-muted);font-weight:600;}
+.stat .value{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-top:6px;}
+.stat.good .value{color:var(--good);}
+.stat.bad .value{color:var(--bad);}
+.stat.accent .value{color:var(--accent);}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-muted);font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.row-click{cursor:pointer;transition:.1s;}
+tr.row-click:hover{background:#F9FBFC;}
+.pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+.pill-good{background:var(--good-soft);color:var(--good);}
+.pill-bad{background:var(--bad-soft);color:var(--bad);}
+.pill-warn{background:var(--warn-soft);color:var(--warn);}
+.pill-accent{background:var(--accent-soft);color:var(--accent);}
+.pill-violet{background:var(--violet-soft);color:var(--violet);}
+.pill-muted{background:#EEF1F3;color:var(--ink-muted);}
+
+.searchbar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:16px;max-width:340px;}
+.searchbar input{border:none;outline:none;font-size:13.5px;width:100%;background:transparent;}
+
+.empty{padding:50px 20px;text-align:center;color:var(--ink-muted);}
+.empty .ic{font-size:30px;margin-bottom:8px;}
+
+/* ---- Modal ---- */
+.modal-bg{position:fixed;inset:0;background:rgba(15,29,36,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:24px 26px;}
+.modal h2{font-size:17px;margin:0 0 16px;}
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:7px;font-size:13.5px;outline:none;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+
+/* ---- Patient detail ---- */
+.patient-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:14px;flex-wrap:wrap;}
+.patient-head .name{font-size:20px;font-weight:700;}
+.patient-head .meta{color:var(--ink-muted);font-size:12.5px;margin-top:3px;}
+.back-link{background:none;border:none;color:var(--ink-muted);font-size:13px;margin-bottom:12px;display:inline-flex;align-items:center;gap:5px;padding:0;}
+.back-link:hover{color:var(--primary);}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:18px;}
+.tab{padding:10px 4px;margin-right:22px;background:none;border:none;font-size:13.5px;font-weight:600;color:var(--ink-muted);border-bottom:2px solid transparent;}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary);}
+
+/* ---- Odontogram ---- */
+.arch-wrap{padding:26px 10px 10px;overflow-x:auto;}
+.arch{display:flex;justify-content:center;padding:14px 0;}
+.tooth{width:30px;height:38px;border:1.5px solid var(--border);border-radius:7px 7px 4px 4px;background:#fff;margin:0 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:.12s;position:relative;}
+.tooth:hover{border-color:var(--accent);transform:translateY(-2px);}
+.tooth.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--accent-soft);}
+.tooth .num{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--ink-muted);position:absolute;bottom:-16px;}
+.tooth.s-cariado{background:var(--bad-soft);border-color:var(--bad);}
+.tooth.s-restaurado{background:var(--accent-soft);border-color:var(--accent);}
+.tooth.s-ausente{background:#EEF1F3;border-color:#C7CFD5;}
+.tooth.s-ausente::after{content:'×';color:#9AA6AE;font-size:16px;}
+.tooth.s-planejado{background:var(--warn-soft);border-color:var(--warn);border-style:dashed;}
+.tooth.s-canal{background:var(--violet-soft);border-color:var(--violet);}
+.arch-label{text-align:center;font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:26px 0 4px;}
+.legend{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:22px;font-size:12px;color:var(--ink-muted);}
+.legend span{display:inline-flex;align-items:center;gap:5px;}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block;}
+.tooth-panel{margin-top:18px;padding:16px 18px;background:#F9FBFC;border-radius:10px;border:1px solid var(--border);}
+.status-choices{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px;}
+.status-choices button{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;color:var(--ink-muted);}
+.status-choices button.active{border-color:currentColor;}
+
+/* ---- Agenda ---- */
+.agenda-head{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.date-nav{display:flex;align-items:center;gap:6px;}
+.date-nav button{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:14px;}
+.date-nav button:hover{border-color:var(--accent);}
+.date-nav input[type=date]{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;}
+.slot{display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--border);}
+.slot:last-child{border-bottom:none;}
+.slot .time{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13.5px;width:52px;color:var(--primary);flex-shrink:0;}
+.slot .info{flex:1;min-width:0;}
+.slot .info .p{font-weight:600;font-size:13.5px;}
+.slot .info .d{font-size:12px;color:var(--ink-muted);margin-top:1px;}
+
+/* ---- Financeiro ---- */
+.tag-btns{display:flex;gap:6px;margin-bottom:16px;}
+.tag-btn{padding:6px 13px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:12.5px;font-weight:600;color:var(--ink-muted);}
+.tag-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+
+.amt-in{color:var(--good);font-weight:600;}
+.amt-out{color:var(--bad);font-weight:600;}
+
+.loading-screen{display:flex;align-items:center;justify-content:center;height:100vh;width:100%;color:var(--ink-muted);font-size:14px;}
+.storage-note{position:fixed;bottom:10px;right:14px;font-size:11px;color:var(--ink-muted);background:var(--surface);border:1px solid var(--border);padding:5px 10px;border-radius:6px;z-index:5;}
+
+/* ---- Imagens / Raio-X ---- */
+.img-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.upload-label{display:inline-flex;align-items:center;gap:6px;background:var(--primary);color:#fff;padding:9px 15px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.upload-label:hover{background:var(--primary-dark);}
+.upload-label input{display:none;}
+.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+.img-thumb{border:1px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;background:#fff;transition:.12s;}
+.img-thumb:hover{border-color:var(--accent);transform:translateY(-2px);}
+.img-thumb .ph{width:100%;height:110px;object-fit:cover;display:block;background:#EEF1F3;}
+.img-thumb .meta{padding:7px 9px;}
+.img-thumb .meta .n{font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.img-thumb .meta .d{font-size:10.5px;color:var(--ink-muted);margin-top:1px;}
+.lightbox-bg{position:fixed;inset:0;background:rgba(10,20,26,.85);display:flex;align-items:center;justify-content:center;z-index:200;padding:24px;}
+.lightbox-inner{max-width:min(90vw,820px);max-height:88vh;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.lightbox-inner img{max-width:100%;max-height:70vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.4);}
+.lightbox-bar{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);padding:8px 14px;border-radius:8px;color:#fff;font-size:12.5px;}
+.lightbox-bar button{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12.5px;font-weight:600;}
+.lightbox-bar button:hover{background:rgba(255,255,255,.28);}
+.storage-warn{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);border-radius:8px;padding:9px 13px;font-size:12.5px;margin-bottom:14px;}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading-screen">Carregando OdontoGestor…</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ============================================================
+   ARMAZENAMENTO LOCAL (localStorage do navegador)
+   -----------------------------------------------------------
+   Esta versão foi adaptada para rodar fora do ambiente de
+   artifacts do Claude, usando localStorage no lugar de
+   window.storage. Os dados ficam salvos SOMENTE neste
+   navegador/computador. Se quiser acesso multiusuário/nuvem,
+   é necessário trocar isto por um backend (Firebase/Supabase).
+   ============================================================ */
+const storage = {
+  get: async (key) => {
+    const raw = localStorage.getItem(key);
+    if (raw === null) throw new Error('key not found');
+    return { key, value: raw, shared: false };
+  },
+  set: async (key, value) => {
+    try{ localStorage.setItem(key, value); return { key, value, shared:false }; }
+    catch(e){ console.error('Erro ao gravar no localStorage', e); return null; }
+  },
+  delete: async (key) => {
+    localStorage.removeItem(key);
+    return { key, deleted:true, shared:false };
+  },
+  list: async (prefix) => {
+    const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+    return { keys, prefix, shared:false };
+  }
+};
+window.storage = storage;
+
+/* ============ STORAGE ============ */
+const KEYS = { patients:'dental_patients', appts:'dental_appointments', expenses:'dental_clinic_expenses' };
+let state = { patients: [], appts: [], expenses: [], loaded:false, view:'dashboard', selectedPatientId:null, patientTab:'odonto', selectedTooth:null, agendaDate: todayISO(), financeFilter:'todos', modal:null, search:'', viewImageId:null };
+
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+async function loadAll(){
+  try{
+    const p = await window.storage.get(KEYS.patients).catch(()=>null);
+    state.patients = p ? JSON.parse(p.value) : [];
+  }catch(e){ state.patients = []; }
+  try{
+    const a = await window.storage.get(KEYS.appts).catch(()=>null);
+    state.appts = a ? JSON.parse(a.value) : [];
+  }catch(e){ state.appts = []; }
+  try{
+    const ex = await window.storage.get(KEYS.expenses).catch(()=>null);
+    state.expenses = ex ? JSON.parse(ex.value) : [];
+  }catch(e){ state.expenses = []; }
+  state.loaded = true;
+  render();
+}
+
+async function savePatients(){ try{ await window.storage.set(KEYS.patients, JSON.stringify(state.patients)); }catch(e){ console.error('Erro ao salvar pacientes', e); } }
+async function saveAppts(){ try{ await window.storage.set(KEYS.appts, JSON.stringify(state.appts)); }catch(e){ console.error('Erro ao salvar agenda', e); } }
+async function saveExpenses(){ try{ await window.storage.set(KEYS.expenses, JSON.stringify(state.expenses)); }catch(e){ console.error('Erro ao salvar despesas', e); } }
+
+/* ============ HELPERS ============ */
+function fmtMoney(v){ return (v<0?'-':'')+'R$ '+Math.abs(v).toFixed(2).replace('.',','); }
+function fmtDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
+function esc(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function getPatient(id){ return state.patients.find(p=>p.id===id); }
+
+const FDI_UPPER = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
+const FDI_LOWER = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+const STATUS_DEFS = {
+  higido:{label:'Hígido', cls:'', color:'#66788A'},
+  cariado:{label:'Cariado', cls:'s-cariado', color:'#DA5B4C'},
+  restaurado:{label:'Restaurado', cls:'s-restaurado', color:'#14919B'},
+  planejado:{label:'Tratamento planejado', cls:'s-planejado', color:'#D98E2B'},
+  canal:{label:'Canal', cls:'s-canal', color:'#7C6FD1'},
+  ausente:{label:'Ausente', cls:'s-ausente', color:'#9AA6AE'},
+};
+
+function patientBalance(p){
+  return (p.financials||[]).reduce((s,f)=> s + (f.type==='receita'? f.value : -f.value), 0);
+}
+function patientPending(p){
+  return (p.financials||[]).filter(f=>f.status==='pendente' && f.type==='receita').reduce((s,f)=>s+f.value,0);
+}
+
+/* ============ RENDER ROOT ============ */
+function render(){
+  const app = document.getElementById('app');
+  if(!state.loaded){ app.innerHTML = '<div class="loading-screen">Carregando OdontoGestor…</div>'; return; }
+  app.innerHTML = `
+    <div class="sidebar">
+      <div class="brand"><div class="display">🦷 OdontoGestor</div><div class="sub">Gestão de clínica</div></div>
+      <div class="nav">
+        ${navItem('dashboard','📊','Visão geral')}
+        ${navItem('patients','🗂️','Pacientes')}
+        ${navItem('agenda','📅','Agenda')}
+        ${navItem('finance','💰','Financeiro')}
+      </div>
+      <div class="sidebar-foot">${state.patients.length} pacientes cadastrados</div>
+    </div>
+    <main id="main"></main>
+  `;
+  renderMain();
+  attachSidebarEvents();
+  if(state.modal) renderModal();
+  if(state.viewImageId) renderLightbox();
+  if(!document.getElementById('storage-note')){
+    const note = document.createElement('div');
+    note.id='storage-note';
+    note.className='storage-note';
+    note.textContent='💾 Dados salvos apenas neste navegador';
+    document.body.appendChild(note);
+  }
+}
+function navItem(id,ic,label){
+  return `<button class="nav-item ${state.view===id?'active':''}" data-nav="${id}"><span class="ic">${ic}</span>${label}</button>`;
+}
+function attachSidebarEvents(){
+  document.querySelectorAll('[data-nav]').forEach(b=> b.onclick = ()=>{ state.view=b.dataset.nav; state.selectedPatientId=null; render(); });
+}
+
+function renderMain(){
+  const main = document.getElementById('main');
+  if(state.view==='dashboard') main.innerHTML = viewDashboard();
+  else if(state.view==='patients') main.innerHTML = state.selectedPatientId ? viewPatientDetail() : viewPatients();
+  else if(state.view==='agenda') main.innerHTML = viewAgenda();
+  else if(state.view==='finance') main.innerHTML = viewFinance();
+  attachMainEvents();
+}
+
+/* ============ DASHBOARD ============ */
+function viewDashboard(){
+  const totalRec = state.patients.flatMap(p=>p.financials||[]).filter(f=>f.type==='receita' && f.status==='pago').reduce((s,f)=>s+f.value,0);
+  const totalPend = state.patients.flatMap(p=>p.financials||[]).filter(f=>f.type==='receita' && f.status==='pendente').reduce((s,f)=>s+f.value,0);
+  const totalDespesas = state.expenses.reduce((s,e)=>s+e.value,0) + state.patients.flatMap(p=>p.financials||[]).filter(f=>f.type==='despesa').reduce((s,f)=>s+f.value,0);
+  const hoje = state.appts.filter(a=>a.date===todayISO()).sort((a,b)=>a.time.localeCompare(b.time));
+  return `
+    <div class="topbar"><div><h1>Visão geral</h1><p class="desc">Resumo da clínica em ${fmtDate(todayISO())}</p></div></div>
+    <div class="grid-stats">
+      <div class="card stat good"><div class="label">Recebido (pago)</div><div class="value mono">${fmtMoney(totalRec)}</div></div>
+      <div class="card stat"><div class="label">A receber (pendente)</div><div class="value mono" style="color:var(--warn)">${fmtMoney(totalPend)}</div></div>
+      <div class="card stat bad"><div class="label">Despesas</div><div class="value mono">${fmtMoney(totalDespesas)}</div></div>
+      <div class="card stat accent"><div class="label">Saldo</div><div class="value mono">${fmtMoney(totalRec-totalDespesas)}</div></div>
+    </div>
+    <div class="card" style="padding:18px 20px;">
+      <h3 style="margin:0 0 12px;font-size:14.5px;">Agenda de hoje</h3>
+      ${hoje.length===0 ? '<div class="empty" style="padding:24px 0;">Nenhum agendamento para hoje.</div>' :
+        hoje.map(a=>`<div class="slot"><span class="time">${a.time}</span><div class="info"><div class="p">${esc(a.patientName)}</div><div class="d">${esc(a.procedure||'—')}</div></div>${statusPill(a.status)}</div>`).join('')}
+    </div>
+  `;
+}
+
+/* ============ PATIENTS LIST ============ */
+function viewPatients(){
+  const q = state.search.toLowerCase();
+  const list = state.patients.filter(p=>p.name.toLowerCase().includes(q));
+  return `
+    <div class="topbar">
+      <div><h1>Pacientes</h1><p class="desc">Cadastro, odontograma e histórico de cada paciente</p></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" id="btn-export-patients-excel">⬇ Excel</button>
+        <button class="btn btn-primary" id="btn-new-patient">+ Novo paciente</button>
+      </div>
+    </div>
+    <div class="searchbar">🔎 <input id="patient-search" placeholder="Buscar paciente..." value="${esc(state.search)}"></div>
+    <div class="card">
+      ${list.length===0 ? `<div class="empty"><div class="ic">🗂️</div>Nenhum paciente encontrado.</div>` : `
+      <table>
+        <thead><tr><th>Nome</th><th>Telefone</th><th>Última visita</th><th>Saldo</th><th></th></tr></thead>
+        <tbody>
+          ${list.map(p=>{
+            const bal = patientBalance(p);
+            const lastProc = (p.procedures||[]).slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
+            return `<tr class="row-click" data-patient="${p.id}">
+              <td><strong>${esc(p.name)}</strong></td>
+              <td class="mono">${esc(p.phone||'—')}</td>
+              <td>${lastProc? fmtDate(lastProc.date):'—'}</td>
+              <td class="mono" style="color:${bal>=0?'var(--good)':'var(--bad)'}">${fmtMoney(bal)}</td>
+              <td style="text-align:right;"><button class="btn btn-ghost btn-sm" data-del-patient="${p.id}">Excluir</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`}
+    </div>
+  `;
+}
+
+/* ============ PATIENT DETAIL ============ */
+function viewPatientDetail(){
+  const p = getPatient(state.selectedPatientId);
+  if(!p){ state.selectedPatientId=null; return viewPatients(); }
+  const bal = patientBalance(p);
+  const pend = patientPending(p);
+  return `
+    <button class="back-link" id="back-to-patients">← Voltar para pacientes</button>
+    <div class="patient-head">
+      <div>
+        <div class="name">${esc(p.name)}</div>
+        <div class="meta">${p.phone? '📞 '+esc(p.phone)+'  ·  ':''}${p.birthdate? '🎂 '+fmtDate(p.birthdate)+'  ·  ':''}${p.insurance?.convenio? '🩺 '+esc(p.insurance.convenio)+(p.insurance.plano?' ('+esc(p.insurance.plano)+')':''):'Particular'}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="export-patient-pdf">⬇ Relatório (PDF)</button>
+        <button class="btn btn-ghost btn-sm" id="edit-patient">Editar cadastro</button>
+      </div>
+    </div>
+    <div class="grid-stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
+      <div class="card stat"><div class="label">Saldo do paciente</div><div class="value mono" style="font-size:19px;color:${bal>=0?'var(--good)':'var(--bad)'}">${fmtMoney(bal)}</div></div>
+      <div class="card stat"><div class="label">Pendente</div><div class="value mono" style="font-size:19px;color:var(--warn)">${fmtMoney(pend)}</div></div>
+      <div class="card stat"><div class="label">Procedimentos</div><div class="value mono" style="font-size:19px;">${(p.procedures||[]).length}</div></div>
+    </div>
+    <div class="tabs">
+      <button class="tab ${state.patientTab==='odonto'?'active':''}" data-ptab="odonto">Odontograma</button>
+      <button class="tab ${state.patientTab==='hist'?'active':''}" data-ptab="hist">Histórico de procedimentos</button>
+      <button class="tab ${state.patientTab==='fin'?'active':''}" data-ptab="fin">Financeiro do paciente</button>
+      <button class="tab ${state.patientTab==='images'?'active':''}" data-ptab="images">Imagens / Raio-X</button>
+    </div>
+    ${state.patientTab==='odonto'?patientOdontoTab(p):''}
+    ${state.patientTab==='hist'?patientHistTab(p):''}
+    ${state.patientTab==='fin'?patientFinTab(p):''}
+    ${state.patientTab==='images'?patientImagesTab(p):''}
+  `;
+}
+
+function toothClass(p, num){
+  const t = (p.teeth||{})[num];
+  const st = t && t.status ? t.status : 'higido';
+  return STATUS_DEFS[st].cls;
+}
+function patientOdontoTab(p){
+  const sel = state.selectedTooth;
+  const selData = sel!=null ? (p.teeth||{})[sel] : null;
+  const selStatus = selData && selData.status ? selData.status : 'higido';
+  return `
+  <div class="card arch-wrap">
+    <div class="arch-label">Arcada superior</div>
+    <div class="arch">${FDI_UPPER.map(n=>`<div class="tooth ${toothClass(p,n)} ${sel===n?'selected':''}" data-tooth="${n}"><span class="num">${n}</span></div>`).join('')}</div>
+    <div class="arch-label">Arcada inferior</div>
+    <div class="arch">${FDI_LOWER.map(n=>`<div class="tooth ${toothClass(p,n)} ${sel===n?'selected':''}" data-tooth="${n}"><span class="num">${n}</span></div>`).join('')}</div>
+    <div class="legend">
+      ${Object.entries(STATUS_DEFS).map(([k,v])=>`<span><i style="background:${v.color}"></i>${v.label}</span>`).join('')}
+    </div>
+    ${sel!=null ? `
+    <div class="tooth-panel">
+      <strong>Dente ${sel}</strong>
+      <div class="status-choices">
+        ${Object.entries(STATUS_DEFS).map(([k,v])=>`<button data-set-status="${k}" class="${selStatus===k?'active':''}" style="color:${v.color}">${v.label}</button>`).join('')}
+      </div>
+      <div class="field"><label>Observação</label><textarea id="tooth-note" rows="2" placeholder="Anotação clínica sobre o dente...">${esc(selData&&selData.note||'')}</textarea></div>
+      <button class="btn btn-primary btn-sm" id="save-tooth-note">Salvar observação</button>
+    </div>` : `<div class="empty" style="padding:10px 0 0;">Clique em um dente para registrar status e observações.</div>`}
+  </div>`;
+}
+
+function patientHistTab(p){
+  const procs = (p.procedures||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return `
+  <div class="topbar" style="margin-bottom:12px;"><div></div><button class="btn btn-primary btn-sm" id="btn-new-proc">+ Novo procedimento</button></div>
+  <div class="card">
+    ${procs.length===0? `<div class="empty"><div class="ic">📋</div>Nenhum procedimento registrado.</div>` : `
+    <table><thead><tr><th>Data</th><th>Dente/Região</th><th>Descrição</th><th>Profissional</th><th>Valor</th><th></th></tr></thead>
+    <tbody>${procs.map(pr=>`<tr>
+      <td>${fmtDate(pr.date)}</td><td class="mono">${esc(pr.tooth||'—')}</td><td>${esc(pr.description)}</td>
+      <td>${esc(pr.professional||'—')}</td><td class="mono">${pr.value?fmtMoney(pr.value):'—'}</td>
+      <td style="text-align:right;"><button class="btn btn-ghost btn-sm" data-del-proc="${pr.id}">Excluir</button></td>
+    </tr>`).join('')}</tbody></table>`}
+  </div>`;
+}
+
+function patientFinTab(p){
+  const items = (p.financials||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return `
+  <div class="topbar" style="margin-bottom:12px;"><div></div><button class="btn btn-primary btn-sm" id="btn-new-fin">+ Novo lançamento</button></div>
+  <div class="card">
+    ${items.length===0? `<div class="empty"><div class="ic">💳</div>Nenhum lançamento financeiro.</div>` : `
+    <table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Pagamento</th><th>Status</th><th>Valor</th><th></th></tr></thead>
+    <tbody>${items.map(f=>`<tr>
+      <td>${fmtDate(f.date)}</td><td>${esc(f.description)}</td>
+      <td>${f.type==='receita'?'<span class="pill pill-good">Receita</span>':'<span class="pill pill-bad">Despesa</span>'}</td>
+      <td>${esc(f.paymentMethod||'—')}</td>
+      <td>${statusPillFin(f.status)}</td>
+      <td class="${f.type==='receita'?'amt-in':'amt-out'}">${f.type==='receita'?'+':'-'}${fmtMoney(f.value)}</td>
+      <td style="text-align:right;"><button class="btn btn-ghost btn-sm" data-del-fin="${f.id}">Excluir</button></td>
+    </tr>`).join('')}</tbody></table>`}
+  </div>`;
+}
+function patientImagesTab(p){
+  const imgs = (p.images||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const bytes = estimateStorageBytes();
+  const mb = (bytes/1024/1024).toFixed(1);
+  return `
+  ${bytes/1024/1024 > 4 ? `<div class="storage-warn">⚠️ O armazenamento local deste navegador está em ${mb} MB. Navegadores costumam limitar entre 5–10 MB por site. Faça um backup (aba Visão geral) e evite anexar muitas imagens grandes.</div>` : ''}
+  <div class="img-toolbar">
+    <label class="upload-label">📎 Anexar imagem / raio-x
+      <input type="file" id="img-upload" accept="image/*" multiple>
+    </label>
+    <span style="font-size:12px;color:var(--ink-muted);">${imgs.length} arquivo(s) · imagens são redimensionadas automaticamente ao salvar</span>
+  </div>
+  <div class="card" style="padding:16px;">
+    ${imgs.length===0? `<div class="empty"><div class="ic">🩻</div>Nenhuma imagem anexada ainda.</div>` : `
+    <div class="img-grid">
+      ${imgs.map(img=>`<div class="img-thumb" data-view-img="${img.id}">
+        <img class="ph" src="${img.dataUrl}" alt="${esc(img.name)}">
+        <div class="meta"><div class="n">${esc(img.name)}</div><div class="d">${fmtDate(img.date)}</div></div>
+      </div>`).join('')}
+    </div>`}
+  </div>`;
+}
+function statusPillFin(s){
+  if(s==='pago') return '<span class="pill pill-good">Pago</span>';
+  if(s==='pendente') return '<span class="pill pill-warn">Pendente</span>';
+  return '<span class="pill pill-muted">'+esc(s)+'</span>';
+}
+function statusPill(s){
+  const map = {agendado:'pill-accent',confirmado:'pill-good',realizado:'pill-muted',faltou:'pill-bad'};
+  const label = {agendado:'Agendado',confirmado:'Confirmado',realizado:'Realizado',faltou:'Faltou'};
+  return `<span class="pill ${map[s]||'pill-muted'}">${label[s]||s}</span>`;
+}
+
+/* ============ AGENDA ============ */
+function viewAgenda(){
+  const dayAppts = state.appts.filter(a=>a.date===state.agendaDate).sort((a,b)=>a.time.localeCompare(b.time));
+  return `
+    <div class="topbar">
+      <div><h1>Agenda</h1><p class="desc">Consultas e horários agendados</p></div>
+      <button class="btn btn-primary" id="btn-new-appt">+ Novo agendamento</button>
+    </div>
+    <div class="agenda-head">
+      <div class="date-nav">
+        <button id="day-prev">‹</button>
+        <input type="date" id="agenda-date" value="${state.agendaDate}">
+        <button id="day-next">›</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="day-today">Hoje</button>
+    </div>
+    <div class="card">
+      ${dayAppts.length===0? `<div class="empty"><div class="ic">📅</div>Nenhum agendamento para ${fmtDate(state.agendaDate)}.</div>` :
+      dayAppts.map(a=>`<div class="slot">
+        <span class="time">${a.time}</span>
+        <div class="info"><div class="p">${esc(a.patientName)}</div><div class="d">${esc(a.procedure||'—')} · ${a.duration||30} min</div></div>
+        <select data-appt-status="${a.id}" class="btn-sm" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;">
+          ${['agendado','confirmado','realizado','faltou'].map(s=>`<option value="${s}" ${a.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn btn-ghost btn-sm" data-del-appt="${a.id}">Excluir</button>
+      </div>`).join('')}
+    </div>
+  `;
+}
+
+/* ============ FINANCEIRO GERAL ============ */
+function viewFinance(){
+  const patientFin = state.patients.flatMap(p=>(p.financials||[]).map(f=>({...f, patientName:p.name, patientId:p.id})));
+  const clinicEx = state.expenses.map(e=>({...e, type:'despesa', patientName:'— Despesa da clínica —'}));
+  let all = [...patientFin, ...clinicEx].sort((a,b)=>b.date.localeCompare(a.date));
+  if(state.financeFilter==='receitas') all = all.filter(f=>f.type==='receita');
+  if(state.financeFilter==='despesas') all = all.filter(f=>f.type==='despesa');
+  if(state.financeFilter==='pendentes') all = all.filter(f=>f.status==='pendente');
+
+  const totalRec = patientFin.filter(f=>f.type==='receita'&&f.status==='pago').reduce((s,f)=>s+f.value,0);
+  const totalPend = patientFin.filter(f=>f.type==='receita'&&f.status==='pendente').reduce((s,f)=>s+f.value,0);
+  const totalDesp = clinicEx.reduce((s,f)=>s+f.value,0) + patientFin.filter(f=>f.type==='despesa').reduce((s,f)=>s+f.value,0);
+
+  return `
+    <div class="topbar">
+      <div><h1>Financeiro</h1><p class="desc">Consolidado de receitas e despesas da clínica</p></div>
+      <button class="btn btn-primary" id="btn-new-expense">+ Despesa da clínica</button>
+    </div>
+    <div class="grid-stats">
+      <div class="card stat good"><div class="label">Receitas (pagas)</div><div class="value mono">${fmtMoney(totalRec)}</div></div>
+      <div class="card stat"><div class="label">A receber</div><div class="value mono" style="color:var(--warn)">${fmtMoney(totalPend)}</div></div>
+      <div class="card stat bad"><div class="label">Despesas</div><div class="value mono">${fmtMoney(totalDesp)}</div></div>
+      <div class="card stat accent"><div class="label">Saldo líquido</div><div class="value mono">${fmtMoney(totalRec-totalDesp)}</div></div>
+    </div>
+    <div class="tag-btns">
+      ${['todos','receitas','despesas','pendentes'].map(f=>`<button class="tag-btn ${state.financeFilter===f?'active':''}" data-fin-filter="${f}">${f[0].toUpperCase()+f.slice(1)}</button>`).join('')}
+    </div>
+    <div class="card">
+      ${all.length===0? `<div class="empty"><div class="ic">💰</div>Nenhum lançamento encontrado.</div>` : `
+      <table><thead><tr><th>Data</th><th>Paciente</th><th>Descrição</th><th>Status</th><th>Valor</th></tr></thead>
+      <tbody>${all.map(f=>`<tr>
+        <td>${fmtDate(f.date)}</td><td>${esc(f.patientName)}</td><td>${esc(f.description)}</td>
+        <td>${statusPillFin(f.status)}</td>
+        <td class="${f.type==='receita'?'amt-in':'amt-out'}">${f.type==='receita'?'+':'-'}${fmtMoney(f.value)}</td>
+      </tr>`).join('')}</tbody></table>`}
+    </div>
+  `;
+}
+
+/* ============ MAIN EVENTS ============ */
+function attachMainEvents(){
+  // Patients list
+  document.getElementById('btn-new-patient')?.addEventListener('click', ()=> openModal('patient'));
+  document.getElementById('patient-search')?.addEventListener('input', e=>{ state.search=e.target.value; renderMain(); document.getElementById('patient-search').focus(); document.getElementById('patient-search').selectionStart = document.getElementById('patient-search').value.length; });
+  document.querySelectorAll('[data-patient]').forEach(el=> el.addEventListener('click', ()=>{ state.selectedPatientId=el.dataset.patient; state.patientTab='odonto'; state.selectedTooth=null; render(); }));
+  document.querySelectorAll('[data-del-patient]').forEach(el=> el.addEventListener('click', e=>{ e.stopPropagation(); if(confirm('Excluir este paciente e todo o histórico?')){ state.patients = state.patients.filter(p=>p.id!==el.dataset.delPatient); savePatients(); renderMain(); } }));
+
+  // Patient detail
+  document.getElementById('back-to-patients')?.addEventListener('click', ()=>{ state.selectedPatientId=null; render(); });
+  document.getElementById('edit-patient')?.addEventListener('click', ()=> openModal('patient', getPatient(state.selectedPatientId)));
+  document.querySelectorAll('[data-ptab]').forEach(el=> el.addEventListener('click', ()=>{ state.patientTab=el.dataset.ptab; state.selectedTooth=null; renderMain(); }));
+
+  // Odontogram
+  document.querySelectorAll('[data-tooth]').forEach(el=> el.addEventListener('click', ()=>{ state.selectedTooth = Number(el.dataset.tooth); renderMain(); }));
+  document.querySelectorAll('[data-set-status]').forEach(el=> el.addEventListener('click', ()=>{
+    const p = getPatient(state.selectedPatientId); p.teeth = p.teeth||{};
+    p.teeth[state.selectedTooth] = { ...(p.teeth[state.selectedTooth]||{}), status: el.dataset.setStatus };
+    savePatients(); renderMain();
+  }));
+  document.getElementById('save-tooth-note')?.addEventListener('click', ()=>{
+    const p = getPatient(state.selectedPatientId); p.teeth = p.teeth||{};
+    const cur = p.teeth[state.selectedTooth]||{status:'higido'};
+    p.teeth[state.selectedTooth] = { ...cur, note: document.getElementById('tooth-note').value };
+    savePatients(); renderMain();
+  });
+
+  // History
+  document.getElementById('btn-new-proc')?.addEventListener('click', ()=> openModal('procedure'));
+  document.querySelectorAll('[data-del-proc]').forEach(el=> el.addEventListener('click', ()=>{
+    const p = getPatient(state.selectedPatientId); p.procedures = p.procedures.filter(pr=>pr.id!==el.dataset.delProc);
+    savePatients(); renderMain();
+  }));
+
+  // Patient finance
+  document.getElementById('btn-new-fin')?.addEventListener('click', ()=> openModal('finance'));
+  document.querySelectorAll('[data-del-fin]').forEach(el=> el.addEventListener('click', ()=>{
+    const p = getPatient(state.selectedPatientId); p.financials = p.financials.filter(f=>f.id!==el.dataset.delFin);
+    savePatients(); renderMain();
+  }));
+
+  // Agenda
+  document.getElementById('btn-new-appt')?.addEventListener('click', ()=> openModal('appointment'));
+  document.getElementById('agenda-date')?.addEventListener('change', e=>{ state.agendaDate=e.target.value; renderMain(); });
+  document.getElementById('day-prev')?.addEventListener('click', ()=>{ shiftDay(-1); });
+  document.getElementById('day-next')?.addEventListener('click', ()=>{ shiftDay(1); });
+  document.getElementById('day-today')?.addEventListener('click', ()=>{ state.agendaDate=todayISO(); renderMain(); });
+  document.querySelectorAll('[data-appt-status]').forEach(el=> el.addEventListener('change', ()=>{
+    const a = state.appts.find(x=>x.id===el.dataset.apptStatus); a.status = el.value; saveAppts(); renderMain();
+  }));
+  document.querySelectorAll('[data-del-appt]').forEach(el=> el.addEventListener('click', ()=>{
+    state.appts = state.appts.filter(a=>a.id!==el.dataset.delAppt); saveAppts(); renderMain();
+  }));
+
+  // Finance geral
+  document.getElementById('btn-new-expense')?.addEventListener('click', ()=> openModal('expense'));
+  document.querySelectorAll('[data-fin-filter]').forEach(el=> el.addEventListener('click', ()=>{ state.financeFilter=el.dataset.finFilter; renderMain(); }));
+}
+function shiftDay(n){ const d=new Date(state.agendaDate+'T00:00:00'); d.setDate(d.getDate()+n); state.agendaDate=d.toISOString().slice(0,10); renderMain(); }
+
+/* ============ IMAGENS / RAIO-X ============ */
+function estimateStorageBytes(){
+  let total = 0;
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      total += (k.length + (localStorage.getItem(k)||'').length);
+    }
+  }catch(e){}
+  return total;
+}
+function resizeImage(file, maxDim=1600, quality=0.82){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w>maxDim || h>maxDim){
+          if(w>h){ h = Math.round(h*maxDim/w); w=maxDim; } else { w = Math.round(w*maxDim/h); h=maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = ()=>reject(new Error('Falha ao carregar imagem'));
+      img.src = e.target.result;
+    };
+    reader.onerror = ()=>reject(new Error('Falha ao ler arquivo'));
+    reader.readAsDataURL(file);
+  });
+}
+async function handleImageUpload(fileList){
+  const p = getPatient(state.selectedPatientId);
+  if(!p) return;
+  p.images = p.images||[];
+  for(const file of Array.from(fileList)){
+    if(!file.type.startsWith('image/')) continue;
+    try{
+      const dataUrl = await resizeImage(file);
+      p.images.push({ id:uid(), name:file.name, dataUrl, date:todayISO(), note:'' });
+    }catch(e){ console.error('Erro ao processar imagem', e); }
+  }
+  await savePatients();
+  renderMain();
+}
+function renderLightbox(){
+  const p = getPatient(state.selectedPatientId);
+  const img = p && (p.images||[]).find(i=>i.id===state.viewImageId);
+  if(!img){ state.viewImageId=null; return; }
+  const wrap = document.createElement('div');
+  wrap.className = 'lightbox-bg';
+  wrap.id = 'lightbox-bg';
+  wrap.innerHTML = `
+    <div class="lightbox-inner">
+      <img src="${img.dataUrl}" alt="${esc(img.name)}">
+      <div class="lightbox-bar">
+        <span>${esc(img.name)} · ${fmtDate(img.date)}</span>
+        <button id="lb-delete">Excluir</button>
+        <button id="lb-close">Fechar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e=>{ if(e.target.id==='lightbox-bg') closeLightbox(); });
+  document.getElementById('lb-close').addEventListener('click', closeLightbox);
+  document.getElementById('lb-delete').addEventListener('click', ()=>{
+    if(confirm('Excluir esta imagem?')){
+      p.images = p.images.filter(i=>i.id!==img.id);
+      savePatients();
+      state.viewImageId=null;
+      render();
+    }
+  });
+}
+function closeLightbox(){ state.viewImageId=null; render(); }
+
+/* ============ EXPORTAÇÃO: PDF / EXCEL / BACKUP ============ */
+function exportPatientPDF(p){
+  if(!window.jspdf){ alert('Biblioteca de PDF ainda não carregou. Verifique sua conexão e tente novamente.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 18;
+  doc.setFontSize(16); doc.text('Relatorio do Paciente', 14, y); y+=9;
+  doc.setFontSize(11);
+  doc.text('Nome: '+p.name, 14, y); y+=6;
+  if(p.phone){ doc.text('Telefone: '+p.phone, 14, y); y+=6; }
+  if(p.birthdate){ doc.text('Nascimento: '+fmtDate(p.birthdate), 14, y); y+=6; }
+  if(p.insurance && (p.insurance.convenio||p.insurance.plano||p.insurance.carteirinha)){
+    doc.text('Convenio: '+(p.insurance.convenio||'-')+'   Plano: '+(p.insurance.plano||'-')+'   Carteirinha: '+(p.insurance.carteirinha||'-'), 14, y); y+=6;
+  } else { doc.text('Convenio: Particular', 14, y); y+=6; }
+  y+=5;
+
+  doc.setFontSize(13); doc.text('Procedimentos', 14, y); y+=8;
+  doc.setFontSize(10);
+  const procs = (p.procedures||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(procs.length===0){ doc.text('Nenhum procedimento registrado.', 14, y); y+=6; }
+  procs.forEach(pr=>{
+    if(y>275){ doc.addPage(); y=18; }
+    const line = fmtDate(pr.date)+' - '+pr.description+(pr.tooth?' (dente '+pr.tooth+')':'')+(pr.value?' - '+fmtMoney(pr.value):'');
+    doc.text(line, 14, y); y+=6;
+  });
+  y+=5;
+
+  if(y>250){ doc.addPage(); y=18; }
+  doc.setFontSize(13); doc.text('Financeiro', 14, y); y+=8;
+  doc.setFontSize(10);
+  const fins = (p.financials||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(fins.length===0){ doc.text('Nenhum lancamento financeiro.', 14, y); y+=6; }
+  fins.forEach(f=>{
+    if(y>275){ doc.addPage(); y=18; }
+    const sign = f.type==='receita'?'+':'-';
+    doc.text(fmtDate(f.date)+' - '+f.description+' - '+sign+fmtMoney(f.value)+' ('+(f.status||'')+')', 14, y); y+=6;
+  });
+  const saldo = patientBalance(p);
+  y+=4; if(y>275){ doc.addPage(); y=18; }
+  doc.setFontSize(11); doc.text('Saldo do paciente: '+fmtMoney(saldo), 14, y);
+
+  doc.save('relatorio_'+p.name.replace(/\s+/g,'_')+'.pdf');
+}
+
+function exportPatientsExcel(){
+  if(!window.XLSX){ alert('Biblioteca de Excel ainda não carregou. Verifique sua conexão e tente novamente.'); return; }
+  const rows = state.patients.map(p=>({
+    Nome: p.name,
+    Telefone: p.phone||'',
+    'Data de nascimento': p.birthdate?fmtDate(p.birthdate):'',
+    Convenio: p.insurance?.convenio||'',
+    Plano: p.insurance?.plano||'',
+    Carteirinha: p.insurance?.carteirinha||'',
+    'Procedimentos': (p.procedures||[]).length,
+    'Saldo (R$)': patientBalance(p),
+    'Pendente (R$)': patientPending(p)
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pacientes');
+  XLSX.writeFile(wb, 'pacientes_odontogestor.xlsx');
+}
+
+function exportFinanceExcel(rows){
+  if(!window.XLSX){ alert('Biblioteca de Excel ainda não carregou. Verifique sua conexão e tente novamente.'); return; }
+  const data = rows.map(f=>({
+    Data: fmtDate(f.date),
+    Paciente: f.patientName,
+    Descricao: f.description,
+    Tipo: f.type==='receita'?'Receita':'Despesa',
+    Status: f.status||'',
+    'Forma de pagamento': f.paymentMethod||'',
+    'Valor (R$)': f.type==='receita'? f.value : -f.value
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Financeiro');
+  XLSX.writeFile(wb, 'financeiro_odontogestor.xlsx');
+}
+
+function exportBackupJSON(){
+  const backup = { patients: state.patients, appts: state.appts, expenses: state.expenses, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='backup_odontogestor_'+todayISO()+'.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+function importBackupJSON(file){
+  const reader = new FileReader();
+  reader.onload = async e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!confirm('Importar este backup vai SUBSTITUIR todos os dados atuais deste navegador. Deseja continuar?')) return;
+      state.patients = data.patients||[];
+      state.appts = data.appts||[];
+      state.expenses = data.expenses||[];
+      await savePatients(); await saveAppts(); await saveExpenses();
+      render();
+      alert('Backup importado com sucesso.');
+    }catch(err){ alert('Arquivo de backup inválido.'); }
+  };
+  reader.readAsText(file);
+}
+
+/* ============ MODALS ============ */
+function openModal(type, data){ state.modal = { type, data: data||null }; render(); }
+function closeModal(){ state.modal = null; render(); }
+
+function renderModal(){
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-bg';
+  wrap.id = 'modal-bg';
+  wrap.innerHTML = `<div class="modal">${modalContent()}</div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e=>{ if(e.target.id==='modal-bg') closeModal(); });
+  attachModalEvents();
+}
+
+function modalContent(){
+  const {type, data} = state.modal;
+  if(type==='patient') return `
+    <h2>${data?'Editar paciente':'Novo paciente'}</h2>
+    <div class="field"><label>Nome completo *</label><input id="m-name" value="${esc(data?.name)}"></div>
+    <div class="field-row">
+      <div class="field"><label>Telefone</label><input id="m-phone" value="${esc(data?.phone)}"></div>
+      <div class="field"><label>Data de nascimento</label><input type="date" id="m-birth" value="${data?.birthdate||''}"></div>
+    </div>
+    <div class="field"><label>E-mail</label><input id="m-email" value="${esc(data?.email)}"></div>
+    <div class="field-row">
+      <div class="field"><label>Convênio</label><input id="m-convenio" placeholder="ex: Amil Dental, Particular" value="${esc(data?.insurance?.convenio)}"></div>
+      <div class="field"><label>Plano</label><input id="m-plano" placeholder="ex: Essencial" value="${esc(data?.insurance?.plano)}"></div>
+    </div>
+    <div class="field"><label>Número da carteirinha</label><input id="m-carteirinha" value="${esc(data?.insurance?.carteirinha)}"></div>
+    <div class="field"><label>Observações</label><textarea id="m-notes" rows="2">${esc(data?.notes)}</textarea></div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="m-cancel">Cancelar</button><button class="btn btn-primary" id="m-save">Salvar</button></div>
+  `;
+  if(type==='procedure') return `
+    <h2>Novo procedimento</h2>
+    <div class="field-row">
+      <div class="field"><label>Data *</label><input type="date" id="m-date" value="${todayISO()}"></div>
+      <div class="field"><label>Dente/Região</label><input id="m-tooth" placeholder="ex: 24 ou geral"></div>
+    </div>
+    <div class="field"><label>Descrição *</label><input id="m-desc" placeholder="ex: Restauração em resina fotopolimerizável"></div>
+    <div class="field-row">
+      <div class="field"><label>Profissional</label><input id="m-prof" placeholder="Dr(a)."></div>
+      <div class="field"><label>Valor (R$)</label><input type="number" step="0.01" id="m-value" placeholder="0,00"></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="m-cancel">Cancelar</button><button class="btn btn-primary" id="m-save">Salvar</button></div>
+  `;
+  if(type==='finance') return `
+    <h2>Novo lançamento — paciente</h2>
+    <div class="field-row">
+      <div class="field"><label>Tipo *</label><select id="m-type"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></div>
+      <div class="field"><label>Data *</label><input type="date" id="m-date" value="${todayISO()}"></div>
+    </div>
+    <div class="field"><label>Descrição *</label><input id="m-desc" placeholder="ex: Pagamento tratamento de canal"></div>
+    <div class="field-row">
+      <div class="field"><label>Valor (R$) *</label><input type="number" step="0.01" id="m-value"></div>
+      <div class="field"><label>Status</label><select id="m-status"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
+    </div>
+    <div class="field"><label>Forma de pagamento</label><select id="m-payment"><option>Pix</option><option>Dinheiro</option><option>Cartão de crédito</option><option>Cartão de débito</option><option>Boleto</option><option>Convênio</option></select></div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="m-cancel">Cancelar</button><button class="btn btn-primary" id="m-save">Salvar</button></div>
+  `;
+  if(type==='appointment') return `
+    <h2>Novo agendamento</h2>
+    <div class="field"><label>Paciente *</label><select id="m-patient">${state.patients.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
+    <div class="field-row">
+      <div class="field"><label>Data *</label><input type="date" id="m-date" value="${state.agendaDate}"></div>
+      <div class="field"><label>Horário *</label><input type="time" id="m-time" value="09:00"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Procedimento</label><input id="m-proc" placeholder="ex: Consulta de avaliação"></div>
+      <div class="field"><label>Duração (min)</label><input type="number" id="m-dur" value="30"></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="m-cancel">Cancelar</button><button class="btn btn-primary" id="m-save">Agendar</button></div>
+  `;
+  if(type==='expense') return `
+    <h2>Despesa da clínica</h2>
+    <div class="field-row">
+      <div class="field"><label>Data *</label><input type="date" id="m-date" value="${todayISO()}"></div>
+      <div class="field"><label>Valor (R$) *</label><input type="number" step="0.01" id="m-value"></div>
+    </div>
+    <div class="field"><label>Descrição *</label><input id="m-desc" placeholder="ex: Compra de material odontológico"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="m-cancel">Cancelar</button><button class="btn btn-primary" id="m-save">Salvar</button></div>
+  `;
+  return '';
+}
+
+function attachModalEvents(){
+  document.getElementById('m-cancel')?.addEventListener('click', closeModal);
+  document.getElementById('m-save')?.addEventListener('click', onModalSave);
+}
+
+function onModalSave(){
+  const {type, data} = state.modal;
+  if(type==='patient'){
+    const name = document.getElementById('m-name').value.trim();
+    if(!name){ alert('Informe o nome do paciente.'); return; }
+    const insurance = { convenio:val('m-convenio'), plano:val('m-plano'), carteirinha:val('m-carteirinha') };
+    if(data){
+      Object.assign(data, { name, phone:val('m-phone'), birthdate:val('m-birth'), email:val('m-email'), notes:val('m-notes'), insurance });
+    } else {
+      state.patients.push({ id:uid(), name, phone:val('m-phone'), birthdate:val('m-birth'), email:val('m-email'), notes:val('m-notes'), insurance, teeth:{}, procedures:[], financials:[], images:[] });
+    }
+    savePatients();
+  }
+  if(type==='procedure'){
+    const desc = val('m-desc'); if(!desc){ alert('Informe a descrição do procedimento.'); return; }
+    const p = getPatient(state.selectedPatientId);
+    p.procedures = p.procedures||[];
+    p.procedures.push({ id:uid(), date:val('m-date')||todayISO(), tooth:val('m-tooth'), description:desc, professional:val('m-prof'), value:parseFloat(val('m-value'))||0 });
+    savePatients();
+  }
+  if(type==='finance'){
+    const desc = val('m-desc'); const value = parseFloat(val('m-value'));
+    if(!desc||!value){ alert('Preencha descrição e valor.'); return; }
+    const p = getPatient(state.selectedPatientId);
+    p.financials = p.financials||[];
+    p.financials.push({ id:uid(), type:val('m-type'), date:val('m-date')||todayISO(), description:desc, value, status:val('m-status'), paymentMethod:val('m-payment') });
+    savePatients();
+  }
+  if(type==='appointment'){
+    const patientId = val('m-patient'); const time = val('m-time');
+    if(!patientId||!time){ alert('Selecione paciente e horário.'); return; }
+    const p = getPatient(patientId);
+    state.appts.push({ id:uid(), patientId, patientName:p.name, date:val('m-date')||state.agendaDate, time, procedure:val('m-proc'), duration:parseInt(val('m-dur'))||30, status:'agendado' });
+    saveAppts();
+  }
+  if(type==='expense'){
+    const desc = val('m-desc'); const value = parseFloat(val('m-value'));
+    if(!desc||!value){ alert('Preencha descrição e valor.'); return; }
+    state.expenses.push({ id:uid(), date:val('m-date')||todayISO(), description:desc, value });
+    saveExpenses();
+  }
+  closeModal();
+}
+function val(id){ const el = document.getElementById(id); return el? el.value : ''; }
+
+/* ============ INIT ============ */
+loadAll();
+</script>
+</body>
+</html>
