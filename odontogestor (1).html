@@ -176,6 +176,8 @@ tr.row-click:hover{background:#F9FBFC;}
 .lightbox-bar button{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12.5px;font-weight:600;}
 .lightbox-bar button:hover{background:rgba(255,255,255,.28);}
 .storage-warn{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);border-radius:8px;padding:9px 13px;font-size:12.5px;margin-bottom:14px;}
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);}
+.auth-card{width:100%;max-width:360px;padding:30px 26px;}
 </style>
 </head>
 <body>
@@ -220,6 +222,106 @@ let state = { patients: [], appts: [], expenses: [], loaded:false, view:'dashboa
 
 function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+async function sha256Hex(str){
+  if(window.crypto && crypto.subtle){
+    try{
+      const enc = new TextEncoder().encode(str);
+      const buf = await crypto.subtle.digest('SHA-256', enc);
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }catch(e){ /* segue para fallback */ }
+  }
+  // fallback simples para contextos sem crypto.subtle (ex: file:// sem https) — não é criptográfico
+  let h = 0;
+  for(let i=0;i<str.length;i++){ h = (Math.imul(31,h)+str.charCodeAt(i))|0; }
+  return 'fb_'+Math.abs(h).toString(16);
+}
+
+/* ============ AUTENTICAÇÃO (proteção básica de acesso) ============ */
+const AUTH_KEY = 'dental_auth';
+let authState = 'checking'; // checking | setup | login | ok
+let authError = '';
+
+function initAuth(){
+  const stored = localStorage.getItem(AUTH_KEY);
+  const sessionOk = sessionStorage.getItem('dental_session_ok')==='1';
+  if(stored && sessionOk){ authState='ok'; loadAll(); }
+  else if(stored){ authState='login'; renderAuth(); }
+  else { authState='setup'; renderAuth(); }
+}
+
+function renderAuth(){
+  const app = document.getElementById('app');
+  if(authState==='setup'){
+    app.innerHTML = `
+    <div class="auth-wrap"><div class="auth-card card">
+      <div class="display" style="font-size:20px;margin-bottom:4px;">🦷 OdontoGestor</div>
+      <p class="desc" style="margin:0 0 18px;">Primeiro acesso — crie um usuário e senha para proteger os dados desta clínica neste navegador.</p>
+      <div class="field"><label>Usuário</label><input id="auth-user" placeholder="ex: recepção"></div>
+      <div class="field"><label>Senha</label><input type="password" id="auth-pass"></div>
+      <div class="field"><label>Confirmar senha</label><input type="password" id="auth-pass2"></div>
+      ${authError? `<div class="storage-warn">${esc(authError)}</div>` : ''}
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px;" id="auth-setup-btn">Criar acesso</button>
+      <p style="font-size:11px;color:var(--ink-muted);margin-top:14px;line-height:1.5;">⚠️ Esta senha protege a tela de entrada, mas os dados ficam salvos sem criptografia neste navegador. Não é uma proteção de nível profissional — evite publicar o link em locais totalmente abertos.</p>
+    </div></div>`;
+    document.getElementById('auth-setup-btn').addEventListener('click', onAuthSetup);
+  } else if(authState==='login'){
+    let stored = {};
+    try{ stored = JSON.parse(localStorage.getItem(AUTH_KEY)||'{}'); }catch(e){}
+    app.innerHTML = `
+    <div class="auth-wrap"><div class="auth-card card">
+      <div class="display" style="font-size:20px;margin-bottom:4px;">🦷 OdontoGestor</div>
+      <p class="desc" style="margin:0 0 18px;">Entrar</p>
+      <div class="field"><label>Usuário</label><input id="auth-user" value="${esc(stored.username||'')}"></div>
+      <div class="field"><label>Senha</label><input type="password" id="auth-pass"></div>
+      ${authError? `<div class="storage-warn">${esc(authError)}</div>` : ''}
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px;" id="auth-login-btn">Entrar</button>
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px;" id="auth-forgot-btn">Esqueci minha senha</button>
+    </div></div>`;
+    document.getElementById('auth-login-btn').addEventListener('click', onAuthLogin);
+    document.getElementById('auth-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') onAuthLogin(); });
+    document.getElementById('auth-forgot-btn').addEventListener('click', onAuthForgot);
+  }
+}
+
+async function onAuthSetup(){
+  const user = document.getElementById('auth-user').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const pass2 = document.getElementById('auth-pass2').value;
+  if(!user || !pass){ authError='Preencha usuário e senha.'; renderAuth(); return; }
+  if(pass.length<4){ authError='A senha deve ter pelo menos 4 caracteres.'; renderAuth(); return; }
+  if(pass!==pass2){ authError='As senhas não coincidem.'; renderAuth(); return; }
+  const hash = await sha256Hex(pass);
+  localStorage.setItem(AUTH_KEY, JSON.stringify({username:user, hash}));
+  sessionStorage.setItem('dental_session_ok','1');
+  authError=''; authState='ok';
+  loadAll();
+}
+
+async function onAuthLogin(){
+  let stored = {};
+  try{ stored = JSON.parse(localStorage.getItem(AUTH_KEY)||'{}'); }catch(e){}
+  const user = document.getElementById('auth-user').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const hash = await sha256Hex(pass);
+  if(user===stored.username && hash===stored.hash){
+    sessionStorage.setItem('dental_session_ok','1');
+    authError=''; authState='ok';
+    loadAll();
+  } else {
+    authError='Usuário ou senha incorretos.';
+    renderAuth();
+  }
+}
+
+function onAuthForgot(){
+  if(confirm('Isso vai apagar o usuário/senha salvos e permitir criar um novo acesso. Os dados de pacientes NÃO serão apagados. Deseja continuar?')){
+    localStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem('dental_session_ok');
+    authState='setup'; authError='';
+    renderAuth();
+  }
+}
+
 
 async function loadAll(){
   try{
@@ -279,7 +381,7 @@ function render(){
         ${navItem('agenda','📅','Agenda')}
         ${navItem('finance','💰','Financeiro')}
       </div>
-      <div class="sidebar-foot">${state.patients.length} pacientes cadastrados</div>
+      <div class="sidebar-foot">${state.patients.length} pacientes cadastrados<br><button id="btn-logout" style="background:none;border:none;color:rgba(255,255,255,.55);font-size:11px;padding:0;margin-top:7px;cursor:pointer;text-decoration:underline;">Sair</button></div>
     </div>
     <main id="main"></main>
   `;
@@ -300,6 +402,10 @@ function navItem(id,ic,label){
 }
 function attachSidebarEvents(){
   document.querySelectorAll('[data-nav]').forEach(b=> b.onclick = ()=>{ state.view=b.dataset.nav; state.selectedPatientId=null; render(); });
+  document.getElementById('btn-logout')?.addEventListener('click', ()=>{
+    sessionStorage.removeItem('dental_session_ok');
+    authState='login'; authError=''; renderAuth();
+  });
 }
 
 function renderMain(){
@@ -970,9 +1076,7 @@ function onModalSave(){
 function val(id){ const el = document.getElementById(id); return el? el.value : ''; }
 
 /* ============ INIT ============ */
-loadAll();
+initAuth();
 </script>
 </body>
 </html>
-
- 
