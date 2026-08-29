@@ -372,6 +372,8 @@ function patientPending(p){
 function render(){
   const app = document.getElementById('app');
   if(!state.loaded){ app.innerHTML = '<div class="loading-screen">Carregando OdontoGestor…</div>'; return; }
+  document.getElementById('modal-bg')?.remove();
+  document.getElementById('lightbox-bg')?.remove();
   app.innerHTML = `
     <div class="sidebar">
       <div class="brand"><div class="display">🦷 OdontoGestor</div><div class="sub">Gestão de clínica</div></div>
