@@ -318,7 +318,12 @@ function viewDashboard(){
   const totalDespesas = state.expenses.reduce((s,e)=>s+e.value,0) + state.patients.flatMap(p=>p.financials||[]).filter(f=>f.type==='despesa').reduce((s,f)=>s+f.value,0);
   const hoje = state.appts.filter(a=>a.date===todayISO()).sort((a,b)=>a.time.localeCompare(b.time));
   return `
-    <div class="topbar"><div><h1>Visão geral</h1><p class="desc">Resumo da clínica em ${fmtDate(todayISO())}</p></div></div>
+    <div class="topbar"><div><h1>Visão geral</h1><p class="desc">Resumo da clínica em ${fmtDate(todayISO())}</p></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="btn-export-backup">⬇ Backup (JSON)</button>
+        <label class="btn btn-ghost btn-sm" style="margin:0;">⬆ Importar backup<input type="file" id="btn-import-backup" accept="application/json" style="display:none;"></label>
+      </div>
+    </div>
     <div class="grid-stats">
       <div class="card stat good"><div class="label">Recebido (pago)</div><div class="value mono">${fmtMoney(totalRec)}</div></div>
       <div class="card stat"><div class="label">A receber (pendente)</div><div class="value mono" style="color:var(--warn)">${fmtMoney(totalPend)}</div></div>
@@ -537,6 +542,7 @@ function viewFinance(){
   if(state.financeFilter==='receitas') all = all.filter(f=>f.type==='receita');
   if(state.financeFilter==='despesas') all = all.filter(f=>f.type==='despesa');
   if(state.financeFilter==='pendentes') all = all.filter(f=>f.status==='pendente');
+  state.lastFinanceRows = all;
 
   const totalRec = patientFin.filter(f=>f.type==='receita'&&f.status==='pago').reduce((s,f)=>s+f.value,0);
   const totalPend = patientFin.filter(f=>f.type==='receita'&&f.status==='pendente').reduce((s,f)=>s+f.value,0);
@@ -545,7 +551,10 @@ function viewFinance(){
   return `
     <div class="topbar">
       <div><h1>Financeiro</h1><p class="desc">Consolidado de receitas e despesas da clínica</p></div>
-      <button class="btn btn-primary" id="btn-new-expense">+ Despesa da clínica</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" id="btn-export-finance-excel">⬇ Excel</button>
+        <button class="btn btn-primary" id="btn-new-expense">+ Despesa da clínica</button>
+      </div>
     </div>
     <div class="grid-stats">
       <div class="card stat good"><div class="label">Receitas (pagas)</div><div class="value mono">${fmtMoney(totalRec)}</div></div>
@@ -575,10 +584,12 @@ function attachMainEvents(){
   document.getElementById('patient-search')?.addEventListener('input', e=>{ state.search=e.target.value; renderMain(); document.getElementById('patient-search').focus(); document.getElementById('patient-search').selectionStart = document.getElementById('patient-search').value.length; });
   document.querySelectorAll('[data-patient]').forEach(el=> el.addEventListener('click', ()=>{ state.selectedPatientId=el.dataset.patient; state.patientTab='odonto'; state.selectedTooth=null; render(); }));
   document.querySelectorAll('[data-del-patient]').forEach(el=> el.addEventListener('click', e=>{ e.stopPropagation(); if(confirm('Excluir este paciente e todo o histórico?')){ state.patients = state.patients.filter(p=>p.id!==el.dataset.delPatient); savePatients(); renderMain(); } }));
+  document.getElementById('btn-export-patients-excel')?.addEventListener('click', exportPatientsExcel);
 
   // Patient detail
   document.getElementById('back-to-patients')?.addEventListener('click', ()=>{ state.selectedPatientId=null; render(); });
   document.getElementById('edit-patient')?.addEventListener('click', ()=> openModal('patient', getPatient(state.selectedPatientId)));
+  document.getElementById('export-patient-pdf')?.addEventListener('click', ()=> exportPatientPDF(getPatient(state.selectedPatientId)));
   document.querySelectorAll('[data-ptab]').forEach(el=> el.addEventListener('click', ()=>{ state.patientTab=el.dataset.ptab; state.selectedTooth=null; renderMain(); }));
 
   // Odontogram
@@ -594,6 +605,14 @@ function attachMainEvents(){
     p.teeth[state.selectedTooth] = { ...cur, note: document.getElementById('tooth-note').value };
     savePatients(); renderMain();
   });
+
+  // Imagens / Raio-X
+  document.getElementById('img-upload')?.addEventListener('change', e=>{
+    if(e.target.files && e.target.files.length) handleImageUpload(e.target.files);
+  });
+  document.querySelectorAll('[data-view-img]').forEach(el=> el.addEventListener('click', ()=>{
+    state.viewImageId = el.dataset.viewImg; render();
+  }));
 
   // History
   document.getElementById('btn-new-proc')?.addEventListener('click', ()=> openModal('procedure'));
@@ -624,7 +643,14 @@ function attachMainEvents(){
 
   // Finance geral
   document.getElementById('btn-new-expense')?.addEventListener('click', ()=> openModal('expense'));
+  document.getElementById('btn-export-finance-excel')?.addEventListener('click', ()=> exportFinanceExcel(state.lastFinanceRows||[]));
   document.querySelectorAll('[data-fin-filter]').forEach(el=> el.addEventListener('click', ()=>{ state.financeFilter=el.dataset.finFilter; renderMain(); }));
+
+  // Backup
+  document.getElementById('btn-export-backup')?.addEventListener('click', exportBackupJSON);
+  document.getElementById('btn-import-backup')?.addEventListener('change', e=>{
+    if(e.target.files && e.target.files[0]) importBackupJSON(e.target.files[0]);
+  });
 }
 function shiftDay(n){ const d=new Date(state.agendaDate+'T00:00:00'); d.setDate(d.getDate()+n); state.agendaDate=d.toISOString().slice(0,10); renderMain(); }
 
@@ -948,3 +974,5 @@ loadAll();
 </script>
 </body>
 </html>
+
+ 
